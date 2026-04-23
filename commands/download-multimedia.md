@@ -21,7 +21,18 @@ Eres un asistente que descarga imágenes y videos de las URLs que el usuario com
 > **Método 2 — Personalizado:** Todo se guarda en UNA carpeta con nombre custom, separado en subcarpetas `videos/` y `jpg/`. Ideal para lotes grandes del mismo sitio.
 
 4. Si elige **Método 2**, preguntar: **"¿Cómo quieres que se llame la carpeta?"**
-5. **Detecta el tipo de sitio** y usa el script correcto:
+5. **Pregunta qué hacer después de descargar:**
+
+> **¿Qué quieres además de la descarga?**
+>
+> **1.** Solo descarga (default)
+> **2.** Descarga + transcripción
+> **3.** Descarga + transcripción + puntos clave
+> **4.** Descarga + puntos clave (genera transcripción automáticamente)
+
+Guarda la elección como `post_proceso` (1, 2, 3 o 4). Si el usuario no responde o escribe algo distinto a 1-4, asumir 1 (solo descarga).
+
+6. **Detecta el tipo de sitio** y usa el script correcto:
 
 ### Sitios con soporte dedicado
 
@@ -64,7 +75,7 @@ El script detecta automáticamente el título de cada página (H1 o `<title>`) y
 
 Si varias URLs comparten el mismo título, el secuencial continúa sin repetir nombres.
 
-6. **Si el script genérico falla, descarga 0 archivos, o descarga menos de lo esperado**, NO te rindas. Usa estas técnicas de respaldo en orden:
+7. **Si el script genérico falla, descarga 0 archivos, o descarga menos de lo esperado**, NO te rindas. Usa estas técnicas de respaldo en orden:
 
 ### Técnica 1: yt-dlp directo (para sitios con galerías/álbumes)
 ```bash
@@ -87,10 +98,79 @@ curl -H "Referer: https://DOMINIO/" -H "User-Agent: Mozilla/5.0 (Macintosh; Inte
 - Extrae las URLs del DOM renderizado
 - Descarga con los headers/cookies obtenidos
 
-7. Al terminar, muestra un resumen:
+8. **Post-proceso (solo si `post_proceso` es 2, 3 o 4):**
+
+a) Al terminar TODAS las descargas, localizar todos los videos `.mp4` descargados en esta sesión. Para cada uno, obtener: nombre del archivo, duración (usar `ffprobe -v quiet -show_entries format=duration -of default=nw=1:nk=1 "ruta/video.mp4"` y formatear como MM:SS o HH:MM:SS), tamaño en MB, ruta absoluta.
+
+b) Si no hay ningún video descargado (solo imágenes), informar "No hay videos para procesar" y saltar al paso 9.
+
+c) Mostrar la lista al usuario con formato tabla:
+
+```
+┌─ Videos descargados ─────────────────────────┐
+│ [1] Como_invertir_01.mp4     25:00   120 MB  │
+│ [2] Como_invertir_02.mp4   1:05:00   400 MB  │
+│ [3] Intro_mercado.mp4        08:00    45 MB  │
+│                                               │
+│ ¿Cuáles procesar?                             │
+│   • "todos"                                   │
+│   • "1,3" (específicos por índice)            │
+│   • "ninguno" (cancelar)                      │
+└───────────────────────────────────────────────┘
+```
+
+d) Esperar respuesta del usuario. Interpretar:
+   - `todos`, `all`, o enter vacío → todos los videos de la lista
+   - `ninguno`, `nada`, `cancelar` → saltar al paso 9 sin post-procesar
+   - `1,3` o `1 3` o `1, 3` → videos con esos índices
+
+e) Si el total de duración seleccionada supera 30 minutos, avisar al usuario:
+   `"Esto puede tardar aproximadamente X minutos (~1 min de procesamiento por cada 4 min de video con modelo base). ¿Continuar? (s/n)"` — esperar confirmación.
+
+f) **Si `post_proceso` es 2, 3 o 4** → correr transcripciones. Pasar TODOS los videos seleccionados en UNA sola llamada a `transcribe.py` (reutiliza el modelo cargado):
+
+```bash
+cd {INSTALL_PATH} && source venv/bin/activate && python transcribe.py "RUTA_VIDEO_1" "RUTA_VIDEO_2" ...
+```
+
+Ejecutar con `run_in_background: true` y timeout alto (los videos largos pueden tardar). El script genera `<nombre_video>_transcripcion.md` junto a cada video.
+
+g) **Si `post_proceso` es 3 o 4** → generar puntos clave. Para cada video seleccionado que tenga su `*_transcripcion.md` recién generado:
+
+- Leer el archivo `*_transcripcion.md`
+- Escribir un archivo `*_puntos-clave.md` junto al video (mismo directorio), con esta estructura exacta:
+
+```markdown
+# Puntos clave: [Título del video, sin extensión]
+
+## Resumen
+[2-3 oraciones que describen de qué trata el video]
+
+## Puntos clave
+1. [Punto con breve explicación]
+2. [Punto con breve explicación]
+...
+
+## Conceptos importantes
+- **Término:** definición breve
+- **Término:** definición breve
+
+## Conclusiones / takeaways
+- [Conclusión accionable 1]
+- [Conclusión accionable 2]
+
+## Preguntas para reflexionar
+- [Pregunta que refuerza el aprendizaje]
+- [Pregunta de pensamiento más profundo]
+```
+
+Adaptar el número de puntos clave a la duración (video corto < 15 min = 5-7 puntos, medio 15-45 min = 8-12, largo > 45 min = 12-15). Los puntos clave se generan en español (incluso si la transcripción quedó en otro idioma, el resumen va en español).
+
+9. Al terminar, muestra un resumen:
    - Cuántas imágenes se descargaron
    - Cuántos videos se descargaron
-   - Ruta donde se guardaron (con hipervínculo markdown clickeable)
+   - Si hubo post-proceso: cuántos videos se transcribieron, cuántos fallaron, y las rutas a los `.md` generados como hipervínculos markdown clickeables relativos al workspace (formato: `[nombre.md](projects/download-multimedia/downloaded/...)`)
+   - Ruta base donde se guardaron todos los archivos
    - Si hubo errores irrecuperables, explicar cuáles y por qué
 
 ## Reglas
@@ -103,3 +183,8 @@ curl -H "Referer: https://DOMINIO/" -H "User-Agent: Mozilla/5.0 (Macintosh; Inte
 - NUNCA descargar el mismo archivo dos veces — el script tiene anti-duplicados por URL
 - NUNCA decir "no se puede descargar" sin haber intentado TODAS las técnicas de respaldo
 - Si un sitio bloquea por rate-limit (429), esperar y reintentar con pausas más largas
+- Para transcripciones: NUNCA correr `transcribe.py` antes de que terminen TODAS las descargas
+- Para transcripciones: pasar todos los videos seleccionados en UNA sola llamada a `transcribe.py` (reutiliza el modelo cargado entre videos)
+- Los puntos clave los genera Claude leyendo `*_transcripcion.md` — no hay script para esto
+- Si un video falla al transcribir, continuar con los demás y reportar al final
+- Los archivos de transcripción y puntos clave SIEMPRE van en archivos separados (nunca combinados)
