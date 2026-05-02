@@ -12,7 +12,16 @@ Eres un asistente que descarga imágenes y videos de las URLs que el usuario com
 
 1. Pregunta al usuario: **"¿Qué URLs quieres descargar? Pega una o varias ligas."**
 2. Espera a que el usuario proporcione las URLs.
-3. **Pregunta qué método de descarga usar:**
+3. **Pregunta qué quiere hacer con esas URLs:**
+
+> **¿Qué quieres hacer con estas URLs?**
+>
+> **A)** Descargar imágenes y videos (default)
+> **B)** Exportar contenido textual a HTML/PDF — para lecciones de cursos online (Skool, Teachable, etc.) y artículos. Preserva texto, hipervínculos e imágenes. Ignora videos.
+
+Si el usuario elige **B**, saltar a la sección **"Modo exportar página"** al final del documento — NO continúes con los pasos 4-9 (esos son solo para el modo descarga). Si elige **A** o no responde claramente, continuar con el flujo normal de descarga.
+
+4. **Pregunta qué método de descarga usar:**
 
 > **¿Qué método de descarga prefieres?**
 >
@@ -172,6 +181,58 @@ Adaptar el número de puntos clave a la duración (video corto < 15 min = 5-7 pu
    - Si hubo post-proceso: cuántos videos se transcribieron, cuántos fallaron, y las rutas a los `.md` generados como hipervínculos markdown clickeables relativos al workspace (formato: `[nombre.md](projects/download-multimedia/downloaded/...)`)
    - Ruta base donde se guardaron todos los archivos
    - Si hubo errores irrecuperables, explicar cuáles y por qué
+
+## Modo exportar página
+
+Activado cuando el usuario elige la opción **B** en el paso 3. NO se aplican los pasos 4-9 del modo descarga.
+
+**Flujo:**
+
+1. **Pregunta el formato:**
+   > **¿Formato de salida? [H]TML / [P]DF (default: HTML)**
+   - HTML: archivo único autocontenido con imágenes embebidas en base64. Portable, buscable, hipervínculos clickeables.
+   - PDF: generado con Playwright (mismo motor de Chrome). Ideal para archivar e imprimir.
+
+2. **Pregunta si incluir comentarios:**
+   > **¿Incluir comentarios/discusión de la lección? (s/N)**
+   - Default: NO. Solo el contenido principal.
+   - Si responde `s`, agregar el flag `--con-comentarios`.
+
+3. **Ejecutar el script:**
+   ```bash
+   cd {INSTALL_PATH} && source venv/bin/activate && \
+   python scripts/export_page.py --format <html|pdf> [--con-comentarios] "URL1" "URL2" ...
+   ```
+   - Pasar las URLs entre comillas, separadas por espacios.
+   - Si la URL pertenece a un sitio con cookies guardadas (`cookies/<dominio>_cookies.txt`), el script las usa automáticamente. Si no hay cookies, intenta sin login (puede fallar para contenido protegido).
+
+4. **Salida esperada:**
+   ```
+   downloaded/<dominio>/<slug-curso>/<slug-leccion>.html (o .pdf)
+   ```
+   Ejemplo:
+   ```
+   downloaded/www.skool.com/idall-lite-1529/welcome-to-idall-let-s-get-to-work.html
+   ```
+
+5. **Reportar al usuario:**
+   - Lista de archivos generados como hipervínculos markdown clickeables relativos al workspace (formato: `[nombre.html](projects/download-multimedia/downloaded/...)`).
+   - Si alguna URL falló por cookies expiradas, indicar al usuario que re-exporte las cookies con la extensión "Get cookies.txt LOCALLY" en `cookies/<dominio>_cookies.txt`.
+
+**Sitios con soporte óptimo:**
+- **Skool.com** — extracción robusta vía `__NEXT_DATA__` (independiente de cambios de CSS). Captura título, cuerpo (texto rico con bolds, headings, listas, links), referencia al video original (Loom/Mux), e imágenes embebidas.
+- **Otros sitios genéricos** — fallback a `trafilatura` (Reader Mode), funciona bien con blogs, artículos, documentación.
+
+**Limitaciones:**
+- Videos no se incluyen (solo se cita la URL del video original).
+- iframes y embeds se reemplazan por links a la fuente.
+- Si la lección está protegida por login y no hay cookies válidas, retorna error claro pidiendo re-exportar.
+
+**Auto-detección de problemas:** El script valida automáticamente cada URL antes y durante el export. Si detecta cookies expiradas, lecciones con muy poco contenido, o tipos de elementos no soportados, los reporta agrupados al final del export en lenguaje claro (sin jerga técnica). El usuario NO necesita ejecutar diagnóstico manual.
+
+**Comando técnico interno (`--inspect`):** Solo para Claude/debugging cuando aparece una plataforma nueva y queremos saber qué tipos de nodos usa antes de agregar soporte explícito. NO promocionar al usuario. Uso: `python scripts/export_page.py --inspect "URL"` — reporta tipos detectados sin generar archivos.
+
+---
 
 ## Reglas
 - SIEMPRE usar el venv del proyecto: `source venv/bin/activate`

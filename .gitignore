@@ -5,3 +5,8 @@ downloaded/
 venv/
 .env
 cookies/
+
+# Carpetas de trabajo locales
+downloaded/
+cookies/
+venv/

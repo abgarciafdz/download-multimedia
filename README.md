@@ -1,8 +1,15 @@
-# 📥 Download Multimedia — Skill para Claude Code
+# 📥 download-tools
 
-Skill de [Claude Code](https://docs.claude.com/claude-code) que descarga automáticamente **todas las imágenes y videos** de cualquier URL que le compartas. Sin importar protecciones anti-hotlink, cookies de sesión, contenido dinámico o streams HLS encriptados.
+> Suite open-source de descarga: multimedia genérico (imágenes/videos/cursos) + redes sociales (Instagram/Facebook). Dos commands de Claude Code en un solo repo.
 
-## ✨ Qué hace
+Suite con **dos herramientas** que comparten venv, dependencias y carpeta de cookies:
+
+| Command | Qué descarga |
+|---|---|
+| `/download-multimedia` | Imágenes y videos de **cualquier URL** pública (blogs, portafolios, cursos, etc.) — bypass de protecciones, soporte HLS, fallback a yt-dlp |
+| `/download-social` | Posts, reels, stories, highlights y perfiles de **Instagram y Facebook** (incluye cuentas privadas a las que ya sigues) usando cookies de sesión |
+
+## ✨ download-multimedia
 
 - Descarga **imágenes y videos** de cualquier página web pública
 - Soporta **videos embebidos** (YouTube, Vimeo, Dailymotion, etc.)
@@ -12,136 +19,131 @@ Skill de [Claude Code](https://docs.claude.com/claude-code) que descarga automá
 - Soporte dedicado para **Teachable/Hotmart** (HLS encriptado con ffmpeg)
 - **2 métodos de organización**: subcarpetas secuenciales o carpeta custom con `videos/` y `jpg/` separados
 - Reintentos automáticos con backoff en errores 429/500/502/503/504
+- **Post-proceso opcional**: transcripción local con Whisper + apuntes de estudio
+
+## ✨ download-social
+
+- Descarga **posts, reels, stories, highlights y perfiles** de Instagram
+- Descarga **posts y videos** públicos de Facebook
+- Funciona con **cuentas privadas** a las que ya sigues (vía cookies)
+- Convierte automáticamente videos VP9 → H.264 (compatibilidad QuickTime)
+- Foto de perfil HD opcional como ítem independiente
+- Filtros por fecha, cantidad de posts, inclusión de stories/highlights
 
 ## 🎯 Casos de uso
 
 - Respaldar contenido multimedia de blogs, portafolios o redes públicas
 - Descargar cursos online a los que tienes acceso (Teachable, Hotmart)
-- Guardar galerías de imágenes o álbumes completos
-- Archivar videos embebidos de YouTube/Vimeo desde un artículo
+- Archivar perfiles completos de IG/FB antes de que se eliminen
+- Guardar reels y stories para inspiración o referencia
+- Descargar videos embebidos de YouTube/Vimeo desde un artículo
 
 ## 📋 Requisitos
 
 - **macOS o Linux** (probado principalmente en macOS)
 - **Python 3.9+**
-- **Claude Code** — [instalar aquí](https://docs.claude.com/claude-code)
-- **ffmpeg** (opcional, solo necesario para descargas de Teachable/Hotmart) — `brew install ffmpeg`
+- **ffmpeg** — `brew install ffmpeg`
+- [Claude Code](https://docs.claude.com/claude-code) instalado
+- Para `download-social`: cookies exportadas del navegador (ver instrucciones abajo)
 
 ## 🚀 Instalación
 
 ```bash
-# 1. Clonar el repositorio
-git clone https://github.com/abgarciafdz/download-multimedia-skill.git
-cd download-multimedia-skill
-
-# 2. Ejecutar el instalador
-chmod +x install.sh
+git clone https://github.com/abgarciafdz/download-tools.git
+cd download-tools
 ./install.sh
 ```
 
-El instalador se encarga de:
-- Crear un entorno virtual de Python
-- Instalar las dependencias (`requests`, `beautifulsoup4`, `yt-dlp`, `playwright`, `Pillow`, `lxml`)
-- Instalar Chromium para Playwright
-- Instalar el comando `/download-multimedia` en `~/.claude/commands/`
+El instalador:
+- Crea un entorno virtual de Python
+- Instala las dependencias (`requests`, `beautifulsoup4`, `yt-dlp`, `Pillow`, `lxml`, `gallery-dl`, `openai-whisper`)
+- Instala los commands `/download-multimedia` y `/download-social` en `~/.claude/commands/`
 
 ## 💻 Uso
 
-### Opción 1 — Desde Claude Code (recomendado)
+### Desde Claude Code (recomendado)
 
-Abre Claude Code en cualquier conversación y escribe:
+Abre Claude Code y escribe:
 
 ```
 /download-multimedia
 ```
 
-Claude te preguntará:
-1. Qué URLs quieres descargar (una o varias)
-2. Qué método de descarga prefieres (clásico o personalizado)
+para descargar imágenes/videos de cualquier URL, o:
 
-Y se encarga del resto automáticamente.
+```
+/download-social https://instagram.com/p/ABC/
+```
 
-### Opción 2 — Terminal directo
+para descargar de redes sociales.
 
-**Método 1 — Clásico** (carpetas secuenciales por dominio):
+### Desde terminal
+
+**download-multimedia:**
 
 ```bash
-cd download-multimedia-skill/scripts
 source venv/bin/activate
 python download.py "https://ejemplo.com/articulo"
+
+# Con organización custom:
+python download.py --method 2 --folder "MiCarpeta" "https://url1" "https://url2"
+
+# Teachable/Hotmart (requiere cookies):
+python download_teachable.py --start 1 "https://curso.teachable.com/lectures/YYY"
 ```
 
-**Método 2 — Personalizado** (carpeta custom con `videos/` y `jpg/`):
+**download-social:**
 
 ```bash
-python download.py --method 2 --folder "MiCarpeta" "https://url1.com" "https://url2.com"
+source venv/bin/activate
+
+# Post o reel directo:
+python download_social.py "https://instagram.com/p/ABC/"
+
+# Últimos 30 posts de un perfil:
+python download_social.py --limit 30 --yes "https://instagram.com/usuario/"
+
+# Perfil completo + stories + highlights:
+python download_social.py --include stories,highlights "https://instagram.com/usuario/"
 ```
 
-**Teachable / Hotmart** (requiere cookies exportadas):
+## 🍪 Configurar cookies
 
-```bash
-python download_teachable.py --start 1 "https://curso.teachable.com/courses/XXX/lectures/YYY"
+Algunas descargas requieren cookies de sesión (Teachable para cursos privados, Instagram para cuentas privadas).
+
+1. Instala la extensión **[Get cookies.txt LOCALLY](https://chromewebstore.google.com/detail/get-cookiestxt-locally/cclelndahbckbenkjhflpdbgdldlbecc)** en tu navegador
+2. Inicia sesión en el sitio (Instagram, Facebook, Teachable, etc.)
+3. Click en la extensión → **Export As → Netscape**
+4. Guarda el archivo en `cookies/` con el nombre del dominio:
+   - `cookies/instagram.com_cookies.txt`
+   - `cookies/facebook.com_cookies.txt`
+   - `cookies/micursos.teachable.com_cookies.txt`
+
+## 📁 Estructura de descargas
+
 ```
-
-## 📁 Estructura de carpetas
-
-### Método 1 (Clásico)
-```
-scripts/downloaded/
+downloaded/
+├── instagram.com/
+│   └── @usuario/
+│       ├── 2026-05-02_post-ABC.mp4
+│       └── avatar/perfil-hd.jpg
 ├── apple.com/
-│   ├── 01/
-│   │   ├── Titulo_de_pagina_01.jpg
-│   │   └── Titulo_de_pagina_01.mp4
-│   └── 02/
-│       └── Otra_pagina_01.jpg
-└── behance.net/
+│   └── 01/
+│       └── pagina_01.jpg
+└── teachable.com/
     └── 01/
+        └── lecture_01.mp4
 ```
-
-### Método 2 (Personalizado)
-```
-scripts/downloaded/
-└── sitio.com/
-    └── MiCarpeta/
-        ├── videos/
-        │   ├── video_01.mp4
-        │   └── video_02.mp4
-        └── jpg/
-            ├── imagen_01.jpg
-            └── imagen_02.jpg
-```
-
-## 🍪 Descargar desde sitios con login (Teachable)
-
-Para descargar videos de cursos que requieren login:
-
-1. Instala la extensión de Chrome **[Get cookies.txt LOCALLY](https://chromewebstore.google.com/detail/get-cookiestxt-locally/cclelndahbckbenkjhflpdbgdldlbecc)**
-2. Entra al curso en tu navegador (inicia sesión)
-3. Haz clic en la extensión → **Export**
-4. Guarda el archivo en: `scripts/cookies/<subdominio>.teachable.com_cookies.txt`
-
-Ejemplo de nombre correcto: `scripts/cookies/micursos.teachable.com_cookies.txt`
-
-## 🛠️ Técnicas de respaldo
-
-Si el script principal no logra descargar todo, Claude intenta automáticamente:
-
-1. **yt-dlp directo** — para galerías/álbumes con referer custom
-2. **curl con headers** — descarga manual con Referer y User-Agent
-3. **Análisis del HTML** — busca URLs directamente en el DOM
-4. **Playwright** — renderiza la página con JavaScript para sitios dinámicos
 
 ## ⚙️ Configuración avanzada
 
-Puedes ajustar parámetros en [scripts/download.py](scripts/download.py):
-
-| Parámetro | Valor default | Descripción |
-|-----------|--------------|-------------|
-| `MIN_IMAGE_SIZE` | 300x300px | Tamaño mínimo de imagen (menores se descartan) |
-| `IMAGE_FORMAT` | JPG | Formato de salida para imágenes |
-| `VIDEO_FORMAT` | MP4 | Formato de salida para videos |
-| `MAX_RETRIES` | 3 | Intentos en errores de servidor |
-| `DOWNLOAD_DIR` | `downloaded/` | Carpeta de descargas |
+| Parámetro | Default | Dónde |
+|-----------|---------|-------|
+| `MIN_IMAGE_SIZE` | 300x300px | `download.py` |
+| `IMAGE_FORMAT` | JPG | `download.py` |
+| `VIDEO_FORMAT` | MP4 | `download.py` |
+| `MAX_RETRIES` | 3 | `download.py` |
+| `DOWNLOAD_DIR` | `downloaded/` | `download.py` |
 
 ## ❓ FAQ
 
@@ -149,24 +151,25 @@ Puedes ajustar parámetros en [scripts/download.py](scripts/download.py):
 Sí, siempre y cuando tengas derecho a acceder al contenido. La responsabilidad del uso recae en el usuario. No descargues contenido con copyright que no tengas autorización para guardar.
 
 **¿Funciona en Windows?**
-No está probado en Windows. Debería funcionar con WSL (Windows Subsystem for Linux). En Windows nativo, los scripts Python deberían correr pero `install.sh` no.
+No está probado. Debería funcionar con WSL. En Windows nativo, los scripts Python deberían correr pero `install.sh` no.
 
 **¿Qué hago si un sitio no funciona?**
-Comparte la URL con Claude y di "no funcionó". Claude intentará las 4 técnicas de respaldo automáticamente. Si nada funciona, es probable que el sitio tenga protecciones muy estrictas (Cloudflare premium, tokens de sesión temporales, etc.).
+`download-multimedia` tiene 4 fallbacks automáticos (yt-dlp, curl, análisis HTML, Playwright). Si nada funciona, probablemente el sitio tiene protecciones avanzadas (Cloudflare premium, tokens temporales).
+
+**¿Por qué Instagram pide cookies?**
+Para acceder a contenido de cuentas privadas o tu propio feed. Sin cookies, solo se accede a contenido 100% público.
 
 **¿Puedo usar esto sin Claude Code?**
-Sí, los scripts Python funcionan de forma independiente. Lo que no tendrías es la orquestación inteligente y los fallbacks automáticos.
+Sí, los scripts Python funcionan independientemente. Solo pierdes la orquestación conversacional y los fallbacks automáticos.
 
 ## 🤝 Contribuir
 
-¿Encontraste un bug o quieres agregar soporte para otro sitio? ¡Abre un issue o manda un PR!
-
-- Reporta bugs en [Issues](https://github.com/abgarciafdz/download-multimedia-skill/issues)
+- Reporta bugs en [Issues](https://github.com/abgarciafdz/download-tools/issues)
 - Propuestas de features son bienvenidas
 
-## 📄 Licencia
+## 📜 Licencia
 
-[MIT](LICENSE) — úsalo libremente, modifícalo, distribúyelo.
+MIT — usa, modifica y comparte libremente.
 
 ## ⚠️ Disclaimer
 
@@ -179,4 +182,4 @@ El autor no se hace responsable del uso que se le dé a la herramienta.
 
 ---
 
-Hecho con ☕ por [@abgarciafdz](https://github.com/abgarciafdz)
+Hecho por [@abgarciafdz](https://github.com/abgarciafdz)
