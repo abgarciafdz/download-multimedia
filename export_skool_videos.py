@@ -55,7 +55,7 @@ def export_one(url, tmp_dir):
     after = set(p.name for p in Path(tmp_dir).iterdir())
     new_files = after - before
     if not new_files:
-        print(f"  ✗ no se generó HTML")
+        print("  ✗ no se generó HTML")
         return None
     new_html = next(iter(new_files))
     return Path(tmp_dir) / new_html

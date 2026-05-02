@@ -1029,7 +1029,7 @@ async def inspect_url(url, timeout=60):
             except json.JSONDecodeError:
                 print("⚠ __NEXT_DATA__ no es JSON válido")
         else:
-            print(f"\n__NEXT_DATA__: ✗ no presente — el sitio no es Next.js")
+            print("\n__NEXT_DATA__: ✗ no presente — el sitio no es Next.js")
             print("Estrategia: fallback a trafilatura (Reader Mode genérico)")
             try:
                 import trafilatura

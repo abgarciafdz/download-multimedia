@@ -2,6 +2,7 @@
 """Extract lecture text content from Teachable course pages."""
 
 import asyncio
+import html as html_lib
 import re
 import sys
 from pathlib import Path
@@ -100,10 +101,9 @@ async def extract_text(url, cookies_file):
         return title, html_content, text_content
 
 
-def html_to_markdown(html):
+def html_to_markdown(html_content):
     """Very simple HTML-to-Markdown conversion preserving structure."""
-    import html as html_lib
-    s = html
+    s = html_content
     # Remove script/style
     s = re.sub(r"<script[\s\S]*?</script>", "", s, flags=re.IGNORECASE)
     s = re.sub(r"<style[\s\S]*?</style>", "", s, flags=re.IGNORECASE)

@@ -223,7 +223,7 @@ def main():
             print(f"      → mux: {mux_video['playbackId']}")
             success = download_mux(mux_video["playbackId"], mux_video["playbackToken"], out_path)
         else:
-            print(f"  ✗ lección sin videoLink ni videoId")
+            print("  ✗ lección sin videoLink ni videoId")
             fail += 1
             seq += 1
             continue
