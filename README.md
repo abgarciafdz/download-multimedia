@@ -17,9 +17,11 @@ Suite con **dos herramientas** que comparten venv, dependencias y carpeta de coo
 - **Anti-duplicados** por URL
 - **Bypass** de protecciones anti-hotlink (Referer, cookies, headers completos)
 - Soporte dedicado para **Teachable/Hotmart** (HLS encriptado con ffmpeg)
+- Soporte dedicado para **Skool.com** (videos Mux + export de lecciones a HTML/PDF)
 - **2 métodos de organización**: subcarpetas secuenciales o carpeta custom con `videos/` y `jpg/` separados
 - Reintentos automáticos con backoff en errores 429/500/502/503/504
 - **Post-proceso opcional**: transcripción local con Whisper + apuntes de estudio
+- **Modo exportar página**: convierte lecciones de cursos online a HTML/PDF autocontenido (Skool, Teachable, sitios genéricos vía trafilatura)
 
 ## ✨ download-social
 
